@@ -1,0 +1,20 @@
+[
+    {
+        "id": 1,
+        "nome": "João",
+        "cidade": "Balsas",
+        "valor": 150.5
+    },
+    {
+        "id": 2,
+        "nome": "Maria",
+        "cidade": "São Luís",
+        "valor": 200.0
+    },
+    {
+        "id": 3,
+        "nome": "Conceição",
+        "cidade": "Imperatriz",
+        "valor": 75.25
+    }
+]
