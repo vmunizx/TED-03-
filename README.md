@@ -2,7 +2,7 @@
 
 **Instituição:** UniBalsas Centro Universitário
 **Curso:** Análise e Desenvolvimento de Sistemas (ADS)
-**Disciplina:** Lógica e Matemática Computacional
+**Disciplina:** ALGORITMOS E PROGRAMAÇÃO AVANÇADA
 
 ## Autor
 
