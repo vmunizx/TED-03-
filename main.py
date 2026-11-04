@@ -1,94 +1,93 @@
-"""TED-03 - Gerenciador de Persistência de Dados (CSV e JSON)."""
-import csv
-import json
-import os
-
-from config import PASTA_DADOS
+"""Menu de demonstração da TED 03 - persistência CSV/JSON."""
+from pathlib import Path
+from config import PASTA_DADOS, PASTA_BACKUP
 from conversor import csv_para_json, json_para_csv
 from escritor import escrever_csv
 from leitor import ler_csv, ler_json
+from erros import executar
 
-CSV_CLIENTES = os.path.join(PASTA_DADOS, "clientes.csv")
-JSON_CLIENTES = os.path.join(PASTA_DADOS, "clientes.json")
-CSV_CONVERTIDO = os.path.join(PASTA_DADOS, "clientes_convertido.csv")
-JSON_CONVERTIDO = os.path.join(PASTA_DADOS, "clientes_convertido.json")
-
-# Arquivos usados só para demonstrar o tratamento de erros
-CSV_INEXISTENTE = os.path.join(PASTA_DADOS, "nao_existe.csv")
-JSON_MALFORMADO = os.path.join(PASTA_DADOS, "erros", "malformado.json")
-CSV_LATIN1 = os.path.join(PASTA_DADOS, "erros", "latin1.csv")
-
-ERROS_TRATADOS = (
-    FileNotFoundError,
-    PermissionError,
-    UnicodeDecodeError,
-    json.JSONDecodeError,
-    csv.Error,
-    ValueError,
-    OSError,
-)
+CSV_CLIENTES = PASTA_DADOS / 'clientes.csv'
+JSON_CLIENTES = PASTA_DADOS / 'clientes.json'
+CSV_CONVERTIDO = PASTA_DADOS / 'clientes_convertido.csv'
+JSON_CONVERTIDO = PASTA_DADOS / 'clientes_convertido.json'
 
 
 def adicionar_cliente():
-    """Lê o CSV, acrescenta um cliente e grava (o backup é feito pelo escritor)."""
     dados = ler_csv(CSV_CLIENTES)
-
-    nome = input("Nome: ").strip()
-    cidade = input("Cidade: ").strip()
-    valor_texto = input("Valor: ").strip().replace(",", ".")
-
+    nome = input('Nome: ').strip()
+    cidade = input('Cidade: ').strip()
+    valor_texto = input('Valor: ').strip().replace(',', '.')
     if not nome or not cidade:
-        print("[AVISO] Nome e cidade são obrigatórios. Nada foi alterado.")
-        return
+        raise ValueError('Nome e cidade são obrigatórios.')
     try:
         valor = float(valor_texto)
-    except ValueError:
-        print("[AVISO] Valor inválido (use números, ex.: 99.90). Nada foi alterado.")
-        return
-
-    ids_existentes = [int(reg["id"]) for reg in dados if reg.get("id", "").isdigit()]
-    novo_id = max(ids_existentes, default=0) + 1
-    dados.append({"id": str(novo_id), "nome": nome, "cidade": cidade, "valor": f"{valor:.2f}"})
+    except ValueError as erro:
+        raise ValueError('Valor deve ser numérico (ex.: 99.90).') from erro
+    ids = [int(r['id']) for r in dados if str(r.get('id', '')).isdigit()]
+    novo = {'id': str(max(ids, default=0) + 1), 'nome': nome,
+            'cidade': cidade, 'valor': f'{valor:.2f}'}
+    # Preenche quaisquer campos extras que já existam no arquivo.
+    if dados:
+        novo = {chave: novo.get(chave, '') for chave in dados[0]}
+    dados.append(novo)
     escrever_csv(dados, CSV_CLIENTES)
+    print('[OK] Cliente adicionado.')
+
+
+def exibir_csv():
+    for registro in ler_csv(CSV_CLIENTES):
+        print(registro)
+
+
+def listar_backups():
+    arquivos = sorted(PASTA_BACKUP.glob('*')) if PASTA_BACKUP.exists() else []
+    if not arquivos:
+        print('[INFO] Ainda não há backups.')
+    for arquivo in arquivos:
+        if arquivo.is_file():
+            print(arquivo.name)
+
+
+def executar_opcao(opcao):
+    if opcao == '1':
+        return executar(csv_para_json, CSV_CLIENTES, JSON_CONVERTIDO, caminho=CSV_CLIENTES)
+    if opcao == '2':
+        return executar(json_para_csv, JSON_CLIENTES, CSV_CONVERTIDO, caminho=JSON_CLIENTES)
+    if opcao == '3':
+        return executar(adicionar_cliente, caminho=CSV_CLIENTES)
+    if opcao == '4':
+        return executar(ler_csv, PASTA_DADOS / 'arquivo_que_nao_existe.csv', caminho=PASTA_DADOS / 'arquivo_que_nao_existe.csv')
+    if opcao == '5':
+        caminho = PASTA_DADOS / 'erros' / 'malformado.json'
+        return executar(ler_json, caminho, caminho=caminho)
+    if opcao == '6':
+        caminho = PASTA_DADOS / 'erros' / 'latin1.csv'
+        return executar(ler_csv, caminho, caminho=caminho)
+    if opcao == '7':
+        return executar(listar_backups)
+    if opcao == '8':
+        return executar(exibir_csv)
+    print('[AVISO] Escolha uma opção válida.')
+    return False, None
 
 
 def menu():
+    acoes = ['1 - Converter CSV para JSON', '2 - Converter JSON para CSV',
+             '3 - Adicionar cliente (gera backup)', '4 - Simular arquivo inexistente',
+             '5 - Simular JSON malformado', '6 - Simular codificação inválida',
+             '7 - Listar backups', '8 - Exibir clientes.csv', '0 - Sair']
     while True:
-        print("\n===== TED-03 GERENCIADOR DE PERSISTENCIA =====")
-        print("1 - Converter CSV para JSON")
-        print("2 - Converter JSON para CSV")
-        print("3 - Adicionar novo cliente (testa backup)")
-        print("4 - Simular erro: arquivo inexistente (FileNotFoundError)")
-        print("5 - Simular erro: JSON malformado")
-        print("6 - Simular erro: codificação inválida (UnicodeDecodeError)")
-        print("0 - Sair")
-        opcao = input("Escolha: ").strip()
-
-        if opcao == "0":
-            print("Encerrando.")
+        print('\n===== TED 03 =====')
+        print('\n'.join(acoes))
+        opcao = input('Escolha: ').strip()
+        if opcao == '0':
             break
-
-        try:
-            if opcao == "1":
-                csv_para_json(CSV_CLIENTES, JSON_CONVERTIDO)
-            elif opcao == "2":
-                json_para_csv(JSON_CLIENTES, CSV_CONVERTIDO)
-            elif opcao == "3":
-                adicionar_cliente()
-            elif opcao == "4":
-                ler_csv(CSV_INEXISTENTE)
-            elif opcao == "5":
-                ler_json(JSON_MALFORMADO)
-            elif opcao == "6":
-                ler_csv(CSV_LATIN1)
-            else:
-                print("Opção inválida. Escolha um número do menu.")
-        except ERROS_TRATADOS:
-            # A mensagem detalhada já foi mostrada pelo módulo que detectou o erro.
-            print("Operação cancelada. Voltando ao menu.")
-        except Exception as erro:
-            print(f"[ERRO INESPERADO] {erro}. Voltando ao menu.")
+        executar_opcao(opcao)
 
 
-if __name__ == "__main__":
-    menu()
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) == 2:
+        executar_opcao(sys.argv[1])
+    else:
+        menu()

@@ -1,15 +1,15 @@
-"""Configurações de caminhos do projeto.
+"""Configuração de caminhos e codificação do projeto."""
+from pathlib import Path
 
-Os caminhos são calculados a partir da pasta deste arquivo, então o programa
-funciona mesmo que seja executado de outro diretório.
-"""
-import os
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PASTA_DADOS = os.path.join(BASE_DIR, "dados")
-PASTA_BACKUP = os.path.join(BASE_DIR, "backups")
+BASE_DIR = Path(__file__).resolve().parent
+PASTA_DADOS = BASE_DIR / "dados"
+PASTA_BACKUP = BASE_DIR / "backups"
+ENCODING_LEITURA = "utf-8-sig"
+ENCODING_ESCRITA = "utf-8"
 
 
 def relativo(caminho):
-    """Retorna o caminho relativo ao projeto (mensagens mais curtas e legíveis)."""
-    return os.path.relpath(caminho, BASE_DIR)
+    try:
+        return str(Path(caminho).resolve().relative_to(BASE_DIR))
+    except ValueError:
+        return str(caminho)

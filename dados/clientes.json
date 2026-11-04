@@ -1,20 +1,5 @@
 [
-    {
-        "id": 1,
-        "nome": "João",
-        "cidade": "Balsas",
-        "valor": 150.5
-    },
-    {
-        "id": 2,
-        "nome": "Maria",
-        "cidade": "São Luís",
-        "valor": 200.0
-    },
-    {
-        "id": 3,
-        "nome": "Conceição",
-        "cidade": "Imperatriz",
-        "valor": 75.25
-    }
+  {"id": 1, "nome": "Ana Gonçalves", "cidade": "Balsas", "valor": 275.50},
+  {"id": 2, "nome": "Pedro Araújo", "cidade": "São Luís", "valor": 98.00},
+  {"id": 3, "nome": "Sebastião Lima", "cidade": "Imperatriz", "valor": 1520.99}
 ]

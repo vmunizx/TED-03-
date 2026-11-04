@@ -1,61 +1,42 @@
-"""Escrita de arquivos CSV e JSON, sempre precedida de backup."""
+"""Gravação protegida de CSV e JSON usando with open."""
 import csv
 import json
-
-from backup import realizar_backup
-from config import relativo
-
-
-def escrever_json(dados, caminho):
-    """Grava a lista de registros em JSON (UTF-8, acentos preservados).
-
-    Retorna True se gravou.
-    """
-    try:
-        # Backup ANTES de alterar. Se falhar, a exceção interrompe tudo aqui
-        # e o arquivo original não é tocado.
-        realizar_backup(caminho)
-
-        with open(caminho, "w", encoding="utf-8") as arquivo:
-            json.dump(dados, arquivo, ensure_ascii=False, indent=4)
-        print(f"[ESCRITA] Dados gravados em {relativo(caminho)}")
-        return True
-    except PermissionError:
-        print(f"[ERRO] Sem permissão para escrever: {relativo(caminho)}")
-        raise
-    except (OSError, TypeError) as erro:
-        print(f"[ERRO] Falha ao escrever JSON: {erro}")
-        raise
+from pathlib import Path
+from backup import criar_backup
+from config import ENCODING_ESCRITA, relativo
 
 
-def _campos_do_csv(dados):
-    """Une as chaves de todos os registros, mantendo a ordem em que aparecem."""
-    campos = []
-    for registro in dados:
-        for chave in registro:
-            if chave not in campos:
-                campos.append(chave)
-    return campos
+def _preparar(caminho, pasta_backup=None, avisar=True):
+    # Se o arquivo já existe e o backup falha, a escrita não começa.
+    copia = criar_backup(caminho, pasta_backup, avisar)
+    Path(caminho).parent.mkdir(parents=True, exist_ok=True)
+    return copia
 
 
-def escrever_csv(dados, caminho):
-    """Grava a lista de registros em CSV (UTF-8). Retorna True se gravou."""
+def escrever_json(dados, caminho, pasta_backup=None, avisar=True):
+    # Serializa antes do backup e antes de tocar no arquivo de destino.
+    texto = json.dumps(dados, ensure_ascii=False, indent=2)
+    _preparar(caminho, pasta_backup, avisar)
+    with open(caminho, 'w', encoding=ENCODING_ESCRITA) as arquivo:
+        arquivo.write(texto)
+    if avisar:
+        print(f'[OK] JSON gravado: {relativo(caminho)}')
+    return True
+
+
+def escrever_csv(dados, caminho, pasta_backup=None, avisar=True):
     if not dados:
-        print("[AVISO] Nenhum dado para escrever. O arquivo não foi alterado.")
-        return False
-
-    try:
-        realizar_backup(caminho)
-
-        with open(caminho, "w", encoding="utf-8", newline="") as arquivo:
-            escritor = csv.DictWriter(arquivo, fieldnames=_campos_do_csv(dados))
-            escritor.writeheader()
-            escritor.writerows(dados)
-        print(f"[ESCRITA] Dados gravados em {relativo(caminho)}")
-        return True
-    except PermissionError:
-        print(f"[ERRO] Sem permissão para escrever: {relativo(caminho)}")
-        raise
-    except (OSError, csv.Error) as erro:
-        print(f"[ERRO] Falha ao escrever CSV: {erro}")
-        raise
+        raise ValueError('Não é possível escrever CSV sem registros e cabeçalho.')
+    if not all(isinstance(item, dict) for item in dados):
+        raise ValueError('Cada registro CSV deve ser um dicionário.')
+    campos = list(dict.fromkeys(campo for registro in dados for campo in registro))
+    if not campos:
+        raise ValueError('Os registros CSV precisam ter campos.')
+    _preparar(caminho, pasta_backup, avisar)
+    with open(caminho, 'w', encoding=ENCODING_ESCRITA, newline='') as arquivo:
+        escritor = csv.DictWriter(arquivo, fieldnames=campos)
+        escritor.writeheader()
+        escritor.writerows(dados)
+    if avisar:
+        print(f'[OK] CSV gravado: {relativo(caminho)}')
+    return True
